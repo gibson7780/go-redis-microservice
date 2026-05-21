@@ -3,7 +3,8 @@ package config
 import (
 	"fmt"
 
-	"github.com/gibson7780/go-project/example"
+	"github.com/gibson7780/go-project/common/utils/cache"
+	"github.com/gibson7780/go-project/internal/stats"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
@@ -12,7 +13,7 @@ import (
 /**
 * Sets up API prefix route and all routers.
 **/
-func SetupRouter(db *sqlx.DB) *gin.Engine {
+func SetupRouter(db *sqlx.DB, cacheService cache.Cache) *gin.Engine {
 	router := gin.Default()
 
 	// NOTE: debugging middleware
@@ -38,12 +39,12 @@ func SetupRouter(db *sqlx.DB) *gin.Engine {
 
 	// --- EXAMPLE MICROSERVICE ---
 
-	repo := example.NewRepository(db)
-	service := example.NewService(repo)
-	exampleHandler := example.NewHandler(service)
+	repo := stats.NewRepository(db)
+	service := stats.NewService(repo)
+	statsHandler := stats.NewHandler(service)
 
-	exampleRoutes := api.Group("/example")
-	exampleRoutes.GET("/:id", exampleHandler.GetExample)
-	exampleRoutes.POST("", exampleHandler.CreateExample)
+	statsRoutes := api.Group("/stats")
+	statsRoutes.GET("/:id", statsHandler.GetStats)
+	statsRoutes.POST("", statsHandler.CreateStats)
 	return router
 }

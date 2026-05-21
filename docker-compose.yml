@@ -1,18 +1,43 @@
-version: "3.9"
-
 services:
   db:
-    image: postgres:latest
-    container_name: community_builds_example_service_db
+    image: postgres:17
+    container_name: go_project_db
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: community_builds_example_service_db
+      POSTGRES_DB: go_project_db
     ports:
-      - "5010:5432"
+      - "5800:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - go-project-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: go-project-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - go-project-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   pgdata:
-  test_pgdata:
+  redis_data:
+
+networks:
+  go-project-network:
+    driver: bridge
