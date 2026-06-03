@@ -1,23 +1,33 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	commonhelpers "github.com/gibson7780/go-project/common/utils"
 	"github.com/gibson7780/go-project/common/utils/cache"
 	"github.com/gibson7780/go-project/config"
+	"github.com/gibson7780/go-project/internal/stats"
+	"github.com/gibson7780/go-project/internal/urls"
+	"github.com/gibson7780/go-project/internal/worker"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
 )
 
 var (
 	// grpc
-	serviceName = "examples"
-	httpAddr    = commonhelpers.GetEnvString("PORT", "7001")
+	// serviceName = "examples"
+	httpAddr = commonhelpers.GetEnvString("PORT", "7001")
 )
 
 func main() {
+
 	// --- database setup ---
 	db := config.InitDB()
 	defer db.Close()
@@ -35,14 +45,45 @@ func main() {
 		log.Fatalf("Failed to initialize Redis: %v", err)
 	}
 	defer config.CloseRedis()
-	cacheService := cache.NewRedisCache(config.GetClient())
+	redisClient := config.GetClient()
+	_ = cache.NewRedisCache(redisClient)
 
+	repo := stats.NewRepository(db)
+	statsService := stats.NewService(repo)
+	statsHandler := stats.NewHandler(statsService)
+
+	urlRepo := urls.NewRepository(db)
+	urlService := urls.NewService(db, redisClient, urlRepo, statsService)
+	urlsHandler := urls.NewHandler(urlService)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	w := worker.NewWorker(ctx, redisClient, urlService, statsService)
+	defer cancel()
 	// --- router setup ---
-	router := config.SetupRouter(db, cacheService)
+	router := config.SetupRouter(db, redisClient, urlsHandler, statsHandler)
 
 	// -- start server --
-	if err := router.Run(fmt.Sprintf(":%s", httpAddr)); err != nil {
-		log.Fatal("Failed to start server")
-	}
+	// if err := router.Run(fmt.Sprintf(":%s", httpAddr)); err != nil {
+	// 	log.Fatal("Failed to start server")
+	// }
 
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%s", httpAddr),
+		Handler: router, // 把 gin router 當作 handler 傳進去
+	}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal("Failed to start server")
+		}
+	}()
+
+	// 等待關閉信號
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	w.Wait()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+	srv.Shutdown(shutdownCtx)
 }

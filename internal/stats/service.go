@@ -2,7 +2,6 @@ package stats
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -14,56 +13,48 @@ type service struct {
 }
 
 type Repository interface {
-	Create(example *ExampleCreate) (*Example, error)
-	GetByID(id uuid.UUID) (*Example, error)
+	CreateStat(id uuid.UUID) error
+	GetStat(id uuid.UUID) (*Stat, error)
+	BatchStats(data map[string]int64) error
 }
 
-func NewService(repo Repository) Service {
+func NewService(repo Repository) *service {
 	return &service{repo: repo}
 }
 
-func (s *service) CreateStats(ctx context.Context, req *CreateExampleRequest) (*Example, error) {
+func (s *service) CreateStat(ctx context.Context, req *CreateStatRequest) error {
 	// validation and error handling
-	if req.Name == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "Name field is required")
+	if req.ID.String() == "" {
+		return status.Errorf(codes.InvalidArgument, "Name field is required")
 	}
 
 	// format to fit model for db tags
-	createExample := &ExampleCreate{
-		Name: req.Name,
-	}
-	example, err := s.repo.Create(createExample)
+	err := s.repo.CreateStat(req.ID)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// publish rabbit mq message after succesfuly creating
-	_, err = json.Marshal(example)
-
-	if err != nil {
-		return nil, err
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return &Example{
-		ID:   example.ID,
-		Name: example.Name,
-	}, nil
+	return nil
 }
 
-func (s *service) GetStats(ctx context.Context, id uuid.UUID) (*Example, error) {
-	example, err := s.repo.GetByID(id)
+func (s *service) GetStat(ctx context.Context, id uuid.UUID) (*GetStatResponse, error) {
+	stat, err := s.repo.GetStat(id)
 
 	if err != nil {
 		return nil, err
 	}
 
 	// format to fit grpc structure
-	return &Example{
-		ID:   example.ID,
-		Name: example.Name,
+	return &GetStatResponse{
+		ID:        stat.ID,
+		Count:     stat.Count,
+		UpdatedAt: stat.UpdatedAt,
+		CreatedAt: stat.CreatedAt,
 	}, nil
+}
+
+func (s *service) BatchStats(data map[string]int64) error {
+	err := s.repo.BatchStats(data)
+	return err
 }

@@ -3,17 +3,19 @@ package config
 import (
 	"fmt"
 
-	"github.com/gibson7780/go-project/common/utils/cache"
+	// "github.com/gibson7780/go-project/common/utils/cache"
 	"github.com/gibson7780/go-project/internal/stats"
+	"github.com/gibson7780/go-project/internal/urls"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
+	"github.com/redis/go-redis/v9"
 )
 
 /**
 * Sets up API prefix route and all routers.
 **/
-func SetupRouter(db *sqlx.DB, cacheService cache.Cache) *gin.Engine {
+func SetupRouter(db *sqlx.DB, redisClient redis.UniversalClient, urlsHandler *urls.Handler, statsHandler *stats.Handler) *gin.Engine {
 	router := gin.Default()
 
 	// NOTE: debugging middleware
@@ -33,18 +35,20 @@ func SetupRouter(db *sqlx.DB, cacheService cache.Cache) *gin.Engine {
 	// base route
 	api := router.Group("/api")
 
-	/***************
-	* MICROSERVICES
-	***************/
-
-	// --- EXAMPLE MICROSERVICE ---
-
-	repo := stats.NewRepository(db)
-	service := stats.NewService(repo)
-	statsHandler := stats.NewHandler(service)
+	// repo := stats.NewRepository(db)
+	// statsService := stats.NewService(repo)
+	// statsHandler := stats.NewHandler(statsService)
 
 	statsRoutes := api.Group("/stats")
-	statsRoutes.GET("/:id", statsHandler.GetStats)
-	statsRoutes.POST("", statsHandler.CreateStats)
+	statsRoutes.GET("/:code", statsHandler.GetStat)
+	// statsRoutes.POST("", statsHandler.CreateStat)
+
+	// urlRepo := urls.NewRepository(db)
+	// urlService := urls.NewService(db, redisClient, urlRepo, statsService)
+	// urlsHandler := urls.NewHandler(urlService)
+
+	urlsRoutes := api.Group("/urls")
+	router.GET("/:code", urlsHandler.GetUrl)
+	urlsRoutes.POST("/", urlsHandler.CreateUrl)
 	return router
 }

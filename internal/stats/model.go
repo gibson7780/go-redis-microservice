@@ -2,32 +2,29 @@ package stats
 
 import (
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Example represents a basic example entity
-type Example struct {
-	ID        string    `json:"id" db:"id"`
-	Name      string    `json:"name" db:"name"`
+type Stat struct {
+	ID        uuid.UUID `json:"id" db:"id"`
+	UrlID     uuid.UUID `json:"url_id" db:"url_id"`
+	Count     int64     `json:"count" db:"count"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
-
-// ExampleCreate represents the data needed to create a new example
-type ExampleCreate struct {
-	Name string `json:"name" db:"name"`
+type CreateStatRequest struct {
+	ID uuid.UUID
 }
 
-type CreateExampleEvent struct {
-	ID        string    `json:"id" db:"id"`
-	Name      string    `json:"name" db:"name"`
+type GetStatRequest struct {
+	ID string
+}
+type GetStatResponse struct {
+	ID        uuid.UUID `json:"id" db:"id"`
+	UrlID     uuid.UUID `json:"url_id" db:"url_id"`
+	Count     int64     `json:"count" db:"count"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
-}
-
-type CreateExampleRequest struct {
-	Name string
-}
-
-type GetExampleRequest struct {
-	Id string
 }
