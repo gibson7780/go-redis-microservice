@@ -15,6 +15,7 @@ type Handler struct {
 type Service interface {
 	CreateUrl(ctx context.Context, req *CreateUrlRequest, idemKey string) (*CreateUrlResponse, error)
 	GetUrl(ctx context.Context, code string) (*GetUrlResponse, error)
+	DeleteUrl(ctx context.Context, code string) (*DeleteUrlResponse, error)
 }
 
 func NewHandler(service Service) *Handler {
@@ -52,4 +53,15 @@ func (h *Handler) GetUrl(c *gin.Context) {
 
 	// c.JSON(http.StatusPermanentRedirect, gin.H{"statusCode": http.StatusOK, "message": "Successfully get url.", "result": result})
 	c.Redirect(http.StatusFound, result.OriginUrl)
+}
+
+func (h *Handler) DeleteUrl(c *gin.Context) {
+	code := c.Param("code")
+	_, err := h.service.DeleteUrl(c, code)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"statusCode": http.StatusBadRequest, "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusPermanentRedirect, gin.H{"statusCode": http.StatusOK, "message": "Successfully delete url."})
 }

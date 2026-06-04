@@ -30,6 +30,7 @@ type service struct {
 type Repository interface {
 	CreateUrl(urlPayload *Url) (*Url, error)
 	GetUrl(key string) (*Url, error)
+	DeleteUrl(code string) error
 }
 
 func NewService(db *sqlx.DB, redisClient redis.UniversalClient, repo Repository, statsService StatsService) Service {
@@ -199,4 +200,15 @@ func (s *service) generateTTLJitter() time.Duration {
 	randomNum, _ := rand.Int(rand.Reader, big.NewInt(30)) // 1- 30天
 	jitter := 24 * time.Duration(randomNum.Int64()) * time.Hour
 	return jitter
+}
+
+func (s *service) DeleteUrl(ctx context.Context, code string) (*DeleteUrlResponse, error) {
+	err := s.repo.DeleteUrl(code)
+	if err != nil {
+		return nil, err
+	}
+	// delete redis
+	s.redisClient.Del(ctx, code)
+
+	return &DeleteUrlResponse{}, nil
 }

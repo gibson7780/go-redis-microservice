@@ -47,3 +47,17 @@ func (r *repository) GetUrl(code string) (*Url, error) {
 	slog.Info("response", "response", response)
 	return &response, nil
 }
+
+func (r *repository) DeleteUrl(code string) error {
+
+	query := `
+		DELETE FROM urls
+		WHERE code = $1
+	`
+
+	_, err := r.db.Exec(query, code)
+	if err != nil {
+		return err
+	}
+	return nil
+}

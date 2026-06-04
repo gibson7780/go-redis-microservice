@@ -22,7 +22,7 @@ import (
 
 var (
 	// grpc
-	// serviceName = "examples"
+	// serviceName = "go-project"
 	httpAddr = commonhelpers.GetEnvString("PORT", "7001")
 )
 
@@ -72,6 +72,7 @@ func main() {
 		Addr:    fmt.Sprintf(":%s", httpAddr),
 		Handler: router, // 把 gin router 當作 handler 傳進去
 	}
+	log.Printf("🚀 Server started successfully, listening on http://localhost:%s", httpAddr)
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal("Failed to start server")

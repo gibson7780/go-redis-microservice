@@ -3,7 +3,10 @@ package config
 import (
 	"fmt"
 
+	commonhelpers "github.com/gibson7780/go-project/common/utils"
+
 	// "github.com/gibson7780/go-project/common/utils/cache"
+	"github.com/gibson7780/go-project/internal/auth"
 	"github.com/gibson7780/go-project/internal/stats"
 	"github.com/gibson7780/go-project/internal/urls"
 	"github.com/gin-contrib/cors"
@@ -35,11 +38,24 @@ func SetupRouter(db *sqlx.DB, redisClient redis.UniversalClient, urlsHandler *ur
 	// base route
 	api := router.Group("/api")
 
+	// auth (initialized here since no worker dependency)
+	authRepo := auth.NewRepository(db)
+	authService := auth.NewService(
+		authRepo,
+		redisClient,
+		commonhelpers.GetEnvString("JWT_SECRET", "change-me"),
+	)
+	authHandler := auth.NewHandler(authService)
+
+	// requireAuth guards routes that need a valid Bearer access token
+	requireAuth := auth.RequireAuth(authService)
+
 	// repo := stats.NewRepository(db)
 	// statsService := stats.NewService(repo)
 	// statsHandler := stats.NewHandler(statsService)
 
 	statsRoutes := api.Group("/stats")
+	statsRoutes.Use(requireAuth)
 	statsRoutes.GET("/:code", statsHandler.GetStat)
 	// statsRoutes.POST("", statsHandler.CreateStat)
 
@@ -47,8 +63,17 @@ func SetupRouter(db *sqlx.DB, redisClient redis.UniversalClient, urlsHandler *ur
 	// urlService := urls.NewService(db, redisClient, urlRepo, statsService)
 	// urlsHandler := urls.NewHandler(urlService)
 
+	router.GET("/:code", urlsHandler.GetUrl) // public short-link redirect
+
 	urlsRoutes := api.Group("/urls")
-	router.GET("/:code", urlsHandler.GetUrl)
+	urlsRoutes.Use(requireAuth)
 	urlsRoutes.POST("/", urlsHandler.CreateUrl)
+	urlsRoutes.DELETE("/:code", urlsHandler.DeleteUrl)
+
+	authRoutes := api.Group("/auth")
+	authRoutes.POST("/signup", authHandler.Signup)
+	authRoutes.POST("/signin", authHandler.Signin)
+	authRoutes.POST("/signout", authHandler.Signout)
+
 	return router
 }
