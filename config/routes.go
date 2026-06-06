@@ -7,6 +7,7 @@ import (
 
 	// "github.com/gibson7780/go-project/common/utils/cache"
 	"github.com/gibson7780/go-project/internal/auth"
+	"github.com/gibson7780/go-project/internal/jobs"
 	"github.com/gibson7780/go-project/internal/stats"
 	"github.com/gibson7780/go-project/internal/urls"
 	"github.com/gin-contrib/cors"
@@ -18,7 +19,7 @@ import (
 /**
 * Sets up API prefix route and all routers.
 **/
-func SetupRouter(db *sqlx.DB, redisClient redis.UniversalClient, urlsHandler *urls.Handler, statsHandler *stats.Handler) *gin.Engine {
+func SetupRouter(db *sqlx.DB, redisClient redis.UniversalClient, urlsHandler *urls.Handler, statsHandler *stats.Handler, jobsHandler *jobs.Handler) *gin.Engine {
 	router := gin.Default()
 
 	// NOTE: debugging middleware
@@ -50,21 +51,6 @@ func SetupRouter(db *sqlx.DB, redisClient redis.UniversalClient, urlsHandler *ur
 	// requireAuth guards routes that need a valid Bearer access token
 	requireAuth := auth.RequireAuth(authService)
 
-	// repo := stats.NewRepository(db)
-	// statsService := stats.NewService(repo)
-	// statsHandler := stats.NewHandler(statsService)
-
-	statsRoutes := api.Group("/stats")
-	statsRoutes.Use(requireAuth)
-	statsRoutes.GET("/:code", statsHandler.GetStat)
-	// statsRoutes.POST("", statsHandler.CreateStat)
-
-	// urlRepo := urls.NewRepository(db)
-	// urlService := urls.NewService(db, redisClient, urlRepo, statsService)
-	// urlsHandler := urls.NewHandler(urlService)
-
-	router.GET("/:code", urlsHandler.GetUrl) // public short-link redirect
-
 	urlsRoutes := api.Group("/urls")
 	urlsRoutes.Use(requireAuth)
 	urlsRoutes.POST("/", urlsHandler.CreateUrl)
@@ -74,6 +60,16 @@ func SetupRouter(db *sqlx.DB, redisClient redis.UniversalClient, urlsHandler *ur
 	authRoutes.POST("/signup", authHandler.Signup)
 	authRoutes.POST("/signin", authHandler.Signin)
 	authRoutes.POST("/signout", authHandler.Signout)
+
+	statsRoutes := api.Group("/stats")
+	statsRoutes.Use(requireAuth)
+	statsRoutes.GET("/:code", statsHandler.GetStat)
+	// statsRoutes.POST("", statsHandler.CreateStat)
+
+	router.GET("/:code", urlsHandler.GetUrl) // public short-link redirect
+
+	jobsRoutes := api.Group("/jobs")
+	jobsRoutes.POST("/", jobsHandler.Create)
 
 	return router
 }

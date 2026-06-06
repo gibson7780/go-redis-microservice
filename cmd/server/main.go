@@ -13,6 +13,7 @@ import (
 	commonhelpers "github.com/gibson7780/go-project/common/utils"
 	"github.com/gibson7780/go-project/common/utils/cache"
 	"github.com/gibson7780/go-project/config"
+	"github.com/gibson7780/go-project/internal/jobs"
 	"github.com/gibson7780/go-project/internal/stats"
 	"github.com/gibson7780/go-project/internal/urls"
 	"github.com/gibson7780/go-project/internal/worker"
@@ -56,12 +57,16 @@ func main() {
 	urlService := urls.NewService(db, redisClient, urlRepo, statsService)
 	urlsHandler := urls.NewHandler(urlService)
 
+	jobsRepository := jobs.NewRepository(db)
+	jobsService := jobs.NewService(jobsRepository, redisClient)
+	jobsHandler := jobs.NewHandler(jobsService)
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	w := worker.NewWorker(ctx, redisClient, urlService, statsService)
 	defer cancel()
 	// --- router setup ---
-	router := config.SetupRouter(db, redisClient, urlsHandler, statsHandler)
+	router := config.SetupRouter(db, redisClient, urlsHandler, statsHandler, jobsHandler)
 
 	// -- start server --
 	// if err := router.Run(fmt.Sprintf(":%s", httpAddr)); err != nil {
