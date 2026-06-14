@@ -17,7 +17,7 @@ import (
 )
 
 type StatsService interface {
-	CreateStat(ctx context.Context, state *stats.CreateStatRequest) error
+	CreateStat(ctx context.Context, tx *sqlx.Tx, state *stats.CreateStatRequest) error
 	BatchStats(map[string]int64) error
 }
 type service struct {
@@ -28,7 +28,7 @@ type service struct {
 }
 
 type Repository interface {
-	CreateUrl(urlPayload *Url) (*Url, error)
+	CreateUrl(tx *sqlx.Tx, urlPayload *Url) (*Url, error)
 	GetUrl(key string) (*Url, error)
 	DeleteUrl(code string) error
 }
@@ -127,12 +127,12 @@ func (s *service) Create(ctx context.Context, id uuid.UUID, code string, req *Cr
 		Code:      code,
 	}
 	// create url
-	response, err := s.repo.CreateUrl(CreateUrl)
+	response, err := s.repo.CreateUrl(tx, CreateUrl)
 	// create state relation
 	statesPayload := &stats.CreateStatRequest{
 		ID: id,
 	}
-	err = s.statsService.CreateStat(ctx, statesPayload)
+	err = s.statsService.CreateStat(ctx, tx, statesPayload)
 	if err != nil {
 		return nil, err
 	}

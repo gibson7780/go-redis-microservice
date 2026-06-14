@@ -17,7 +17,7 @@ func NewRepository(db *sqlx.DB) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) CreateStat(urlId uuid.UUID) error {
+func (r *repository) CreateStat(tx *sqlx.Tx, urlId uuid.UUID) error {
 	CreateStat := &Stat{}
 
 	query := `
@@ -26,7 +26,7 @@ func (r *repository) CreateStat(urlId uuid.UUID) error {
 		RETURNING id 
 	`
 
-	err := r.db.QueryRowx(
+	err := tx.QueryRowx(
 		query,
 		urlId,
 	).StructScan(CreateStat)

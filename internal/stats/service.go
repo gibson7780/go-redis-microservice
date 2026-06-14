@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -13,7 +14,7 @@ type service struct {
 }
 
 type Repository interface {
-	CreateStat(id uuid.UUID) error
+	CreateStat(tx *sqlx.Tx, id uuid.UUID) error
 	GetStat(id uuid.UUID) (*Stat, error)
 	BatchStats(data map[string]int64) error
 }
@@ -22,14 +23,14 @@ func NewService(repo Repository) *service {
 	return &service{repo: repo}
 }
 
-func (s *service) CreateStat(ctx context.Context, req *CreateStatRequest) error {
+func (s *service) CreateStat(ctx context.Context, tx *sqlx.Tx, req *CreateStatRequest) error {
 	// validation and error handling
 	if req.ID.String() == "" {
 		return status.Errorf(codes.InvalidArgument, "Name field is required")
 	}
 
 	// format to fit model for db tags
-	err := s.repo.CreateStat(req.ID)
+	err := s.repo.CreateStat(tx, req.ID)
 
 	if err != nil {
 		return err

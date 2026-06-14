@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 )
 
 type Handler struct {
@@ -13,7 +14,7 @@ type Handler struct {
 }
 
 type Service interface {
-	CreateStat(ctx context.Context, req *CreateStatRequest) error
+	CreateStat(ctx context.Context, tx *sqlx.Tx, req *CreateStatRequest) error
 	GetStat(ctx context.Context, id uuid.UUID) (*GetStatResponse, error)
 	BatchStats(data map[string]int64) error
 }

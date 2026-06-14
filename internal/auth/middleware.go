@@ -10,8 +10,8 @@ import (
 
 // context keys for values set by RequireAuth
 const (
-	ContextUserID = "userID"
-	ContextEmail  = "email"
+	UserID = "userID"
+	Email  = "email"
 )
 
 type Verifier interface {
@@ -34,8 +34,8 @@ func RequireAuth(verifier Verifier) gin.HandlerFunc {
 			return
 		}
 
-		c.Set(ContextUserID, claims.UserID)
-		c.Set(ContextEmail, claims.Email)
+		c.Set(UserID, claims.UserID)
+		c.Set(Email, claims.Email)
 		c.Next()
 	}
 }

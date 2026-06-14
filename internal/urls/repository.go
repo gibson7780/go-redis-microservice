@@ -15,7 +15,7 @@ func NewRepository(db *sqlx.DB) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) CreateUrl(payload *Url) (*Url, error) {
+func (r *repository) CreateUrl(tx *sqlx.Tx, payload *Url) (*Url, error) {
 	query := `
 		INSERT INTO urls (id, origin_url, code)
 		VALUES ($1, $2, $3)
@@ -23,7 +23,7 @@ func (r *repository) CreateUrl(payload *Url) (*Url, error) {
 	`
 
 	result := &Url{}
-	err := r.db.QueryRowx(
+	err := tx.QueryRowx(
 		query,
 		payload.ID,
 		payload.OriginUrl,

@@ -58,12 +58,12 @@ func main() {
 	urlsHandler := urls.NewHandler(urlService)
 
 	jobsRepository := jobs.NewRepository(db)
-	jobsService := jobs.NewService(jobsRepository, redisClient)
+	jobsService := jobs.NewService(db, jobsRepository, redisClient)
 	jobsHandler := jobs.NewHandler(jobsService)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	w := worker.NewWorker(ctx, redisClient, urlService, statsService)
+	w := worker.NewWorker(ctx, redisClient, urlService, statsService, jobsService)
 	defer cancel()
 	// --- router setup ---
 	router := config.SetupRouter(db, redisClient, urlsHandler, statsHandler, jobsHandler)
